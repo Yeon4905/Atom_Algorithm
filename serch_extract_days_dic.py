@@ -2,16 +2,18 @@ import pandas as pd
 import os
 from tqdm import tqdm
 from functools import partial  # tqdm progressbar 오류 잡아주는 코드
+from collections import defaultdict
 tqdm = partial(tqdm, position = 0, leave = True )
 
-def search_date(date, days):
+def search_date(traj, date, days):
     """해당 날짜 찾아 날짜별로 리스트 생성 및 업로드 함수
         시간포함이로 날짜만을 원한다면 소수점을 버려야 함
         몫으로 나오게 하면 됨"""
     tmp_date = date // 100000000
     day = tmp_date - 171200
-    if day >= 16 and day <= 20:
-        days[day].append(date)
+    # if day >= 16 and day < 21:
+    days[day].append(traj)
+    return days
 
 def dict_to_dataframe(x, Days):
     """dictionary를 데이터프레임 형식으로 바꿔주는 함수"""
@@ -45,22 +47,27 @@ if __name__ == "__main__":
     # 0~199까지는 1일부터 15일까지, 200~399는 16일부터 31일 데이터가 존재함
     # 이에 빈 리스트일 때 1kb 파일을 생성하지 않도록 해주는 코드가 마지막 4줄임
     if '.csv' in fileExt:
-        for file_num in tqdm(range(0, 400), desc = '파일개수'):
+        for file_num in tqdm(range(200, 201), desc = '파일개수'):
             df = pd.read_csv(dtg_dir + filename[:5] + str(file_num) + '_UTMK' + fileExt, encoding = 'utf-8')
+            # df = df[:100000]
             for i in tqdm(range(len(df)), desc = '한파일라인수'):
+                # print("first:", days)
+                df_traj = df.iloc[i]
                 df_date = df.iloc[i,7]
                 """이게 코드실행시간을 줄여주는가?"""
-                search_date(df_date, days)
-            Days = dict_to_dataframe(days, Days)
+                search_date(df_traj, df_date, days)
+                # print("second:", days)
+            # Days = dict_to_dataframe(days, Days)
+            dict_to_dataframe(days, Days)
             """꼭 변수로 지정해주어야하는건가? 잘 실행되던데 궁금함"""
-            for date in tqdm(range(31), desc = '1712'):
-                save_path = 'C:\\Users\\HYU\\Desktop\\PR\\PR_New1\\1712' + day_list[date]
+            for date in tqdm(range(1, 32), desc = '1712'):
+                save_path = 'C:\\Users\\HYU\\Desktop\\PR\\PR_New1\\1712' + day_list[date-1]
                 if not os.path.isdir(save_path):
                     os.mkdir(save_path)
                 if not days[date]:
                     continue
                 else:
-                    Days[date].to_csv(save_path + '\\2017-' + str(file_num) + ".csv", index = False)
+                    Days[date].to_csv(save_path + '\\2017_' + str(file_num) + ".csv", index = False)
 """partitioning에 대한 궁금증
     교수님께서 한 파일내에 고유차량번호별로 쪼갠 후 날짜별로 sorting을 말씀하셨는데
     그게 시간을 많이 단축할까? 위 코드와는 어떠한 차이가 날까? 현재는 리스트(딕셔너리)에
