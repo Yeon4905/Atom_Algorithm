@@ -17,7 +17,7 @@ def search_date(traj, date, days):
 
 def dict_to_dataframe(x, Days):
     """dictionary를 데이터프레임 형식으로 바꿔주는 함수"""
-    for i in tqdm(range(31), desc = '데이터프레임 변환'):
+    for i in tqdm(range(32), desc = '데이터프레임 변환'):
         Days[i] = pd.DataFrame(x[i])
     return Days
     """ return을 꼭 해야하는가? Jupyter notebook의 특성과 다름 return해줘야 변수 나옴"""
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # 빈 리스트 한번에 생성하기
     # days = [[] for _ in range(31)]
     days = defaultdict(list)
-    Days = ['D' + str(i) for i in range(171201, 171232)]
+    Days = ['D' + str(i) for i in range(171201, 171233)]
 
     # 폴더내 파일 불러오기
     for file in tqdm(file_list, desc = '전체파일리스트'):
@@ -49,6 +49,7 @@ if __name__ == "__main__":
     if '.csv' in fileExt:
         for file_num in tqdm(range(200, 201), desc = '파일개수'):
             df = pd.read_csv(dtg_dir + filename[:5] + str(file_num) + '_UTMK' + fileExt, encoding = 'utf-8')
+            df = df[:100000]
             # df = df[:100000]
             for i in tqdm(range(len(df)), desc = '한파일라인수'):
                 # print("first:", days)
