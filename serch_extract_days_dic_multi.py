@@ -1,14 +1,64 @@
 import pandas as pd
 import os
-import math
-import numpy as np
 import parmap
-from multiprocessing import Pool
-from itertools import product
 from tqdm import tqdm
 from functools import partial  # tqdm progressbar 오류 잡아주는 코드
 from collections import defaultdict
 tqdm = partial(tqdm, position = 0, leave = True )
+
+
+
+def do_it_all( file_lst, dtg_dir, filename, fileExt, day_list, days, Days):
+
+    for file_num in tqdm(file_lst, desc = '파일개수'):
+        df = pd.read_csv(dtg_dir + filename[:5] + str(file_num) + '_UTMK' + fileExt, encoding = 'utf-8')
+        """test용이라 십만줄만"""
+        df = df[:100000]
+
+        """divide the dataframe to list by number of pm_processes
+            didn't need to
+        # df_len = len(df)
+        # num_cores = 2 """
+
+        for i in tqdm(range(len(df)), desc = '한파일라인수'):
+            df_traj = df.iloc[i]
+            df_date = df.iloc[i,7]
+            search_date(df_traj, df_date, days)
+        Days = dict_to_dataframe(days, Days)
+        for date in tqdm(range(1, 32), desc = '1712'):
+            save_path = 'C:\\Users\\HYU\\Desktop\\PR\\PR_New1\\1712' + day_list[date-1]
+            if not os.path.isdir(save_path):
+                os.mkdir(save_path)
+            if not days[date]:
+                continue
+            else:
+                Days[date].to_csv(save_path + '\\2017_' + str(file_num) + ".csv", index = False)
+    return
+
+"""tqdm의 desc가 없을때 결과값을 위의 do_it_all과 비교함
+    별 차이 없음"""
+def do_it_all_at_once( file_lst, dtg_dir, filename, fileExt, day_list, days, Days):
+
+    for file_num in file_lst:
+        df = pd.read_csv(dtg_dir + filename[:5] + str(file_num) + '_UTMK' + fileExt, encoding = 'utf-8')
+        df = df[:100000]
+        """divide the dataframe to list by number of pm_processes"""
+        # df_len = len(df)
+        # num_cores = 2
+        for i in range(len(df)):
+            df_traj = df.iloc[i]
+            df_date = df.iloc[i,7]
+            search_date(df_traj, df_date, days)
+        Days = dict_to_dataframe(days, Days)
+        for date in range(1, 32):
+            save_path = 'C:\\Users\\HYU\\Desktop\\PR\\PR_New1\\1712' + day_list[date-1]
+            if not os.path.isdir(save_path):
+                os.mkdir(save_path)
+            if not days[date]:
+                continue
+            else:
+                Days[date].to_csv(save_path + '\\2017_' + str(file_num) + ".csv", index = False)
+    return
 
 def search_date_to_df(df, days, Days):
     for i in tqdm(range(len(df)), desc = '한파일라인수'):
@@ -71,26 +121,35 @@ if __name__ == "__main__":
     # 폴더내 파일 불러오기
     for file in tqdm(file_list, desc = '전체파일리스트'):
         filename, fileExt = os.path.splitext(file)
+    """기존엔 df를 n개로 나누어 돌리려고 생각하였으나 무한루프가 도는 문제가 생김
+        이에 df를 나누는 것이 아닌 전체 파일을 n개로 나눌 생각을 하여 실행함
+        그것이 해결책이라는 것을 알게됨"""
 
+    file_lst = [range(0,1), range(1, 2), range(2, 3), range(3, 4)]
     if '.csv' in fileExt:
-        for file_num in tqdm(range(200, 201), desc = '파일개수'):
-            df = pd.read_csv(dtg_dir + filename[:5] + str(file_num) + '_UTMK' + fileExt, encoding = 'utf-8')
-            df = df[:100000]
-            """divide the dataframe to list by number of pm_processes"""
-            df_len = len(df)
-            num_cores = 2
-            df_div_list = [df[: (df_len//2)], df[(df_len//2):]]
+        parmap.map(do_it_all_at_once, file_lst, dtg_dir, filename, fileExt, day_list, days, Days, pm_pbar = True, pm_processes = 4)
 
-            # parmap.map(all_search_date_to_df, df_div_list, days, Days)
 
-            """2개의 리스트인 df_div_list가 어떻게 들어가나 확인"""
-            search_date_to_df(df_div_list[0], days, Days)
-            """ 원하는 결과로 잘나옴 """
-            for date in tqdm(range(1, 32), desc = '1712'):
-                save_path = 'C:\\Users\\HYU\\Desktop\\PR\\PR_New1\\1712' + day_list[date-1]
-                if not os.path.isdir(save_path):
-                    os.mkdir(save_path)
-                if not days[date]:
-                    continue
-                else:
-                    Days[date].to_csv(save_path + '\\2017_' + str(file_num) + ".csv", index = False)
+
+
+        # for file_num in tqdm(range(200, 201), desc = '파일개수'):
+        #     df = pd.read_csv(dtg_dir + filename[:5] + str(file_num) + '_UTMK' + fileExt, encoding = 'utf-8')
+        #     df = df[:100000]
+        #     """divide the dataframe to list by number of pm_processes"""
+        #     df_len = len(df)
+        #     num_cores = 2
+        #     # manager = multiprocessing.Manager()
+        #     df_div_list = [df[: (df_len//2)], df[(df_len//2):]]
+
+        #     # Days = parmap.map(search_date_to_df, df_div_list, days, Days, pm_processes = n)
+        #     # Days = np.concatenate(Days)
+        #     # parmap.map(all_search_date_to_df, df_div_list, days, Days)
+        #     search_date_to_df(df_div_list[0], days, Days)
+        # for date in tqdm(range(1, 32), desc = '1712'):
+        #     save_path = 'C:\\Users\\HYU\\Desktop\\PR\\PR_New1\\1712' + day_list[date-1]
+        #     if not os.path.isdir(save_path):
+        #         os.mkdir(save_path)
+        #     if not days[date]:
+        #         continue
+        #     else:
+        #         Days[date].to_csv(save_path + '\\2017_' + str(file_num) + ".csv", index = False)
